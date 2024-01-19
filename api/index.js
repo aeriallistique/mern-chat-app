@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const cookieParser = require('cookie-parser')
 const bcrypt = require('bcryptjs');
+const ws = require('ws');
 
 dotenv.config();
 const mongoose = require('mongoose');
@@ -61,7 +62,7 @@ app.post('/register', async(req, res)=>{
       password: hashedPassword})
     jwt.sign({userId: createdUser._id, username}, jwtSecret,{}, (err, token)=>{
       if(err)throw err;
-      res.cookie('token', token, {sameSite:'none', secure:true}).status(201).json({
+      res.cookie('token', token,{sameSite:'none', secure:true}).status(201).json({
         id: createdUser._id,
       })
 })
@@ -70,7 +71,23 @@ app.post('/register', async(req, res)=>{
   }
 })
   
-app.listen(4000)
+const server = app.listen(4000)
 
-
-
+const wss = new ws.WebSocketServer({server})
+wss.on('connection', (connection, req)=>{
+ const cookies = req.headers.cookie;
+ if(cookies){
+  const tokenCookieString = cookies.split(';').find(str => str.startsWith('token='))
+  if(tokenCookieString){
+    const token = tokenCookieString.split('=')[1];
+    if(token){
+      jwt.verify(token, jwtSecret, {}, (err,userData)=>{
+        if(err) throw err;
+        const { userId, username} = userData;
+        connection.userId = userId;
+        connection.username = username;
+      })
+    }
+  }
+ }
+})
