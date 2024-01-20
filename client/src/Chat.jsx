@@ -10,8 +10,20 @@ export default function Chat(){
    ws.addEventListener('message', handleMessage);
   },[])
 
-  function handleMessage(e){
-    console.log('new message', e);
+  function showOnlinePeople(peopleArray){
+    const people = {}
+    peopleArray.forEach(({userId, username})=>{
+      people[userId] = username;
+    })
+    console.log(people)
+  }
+
+  function handleMessage(ev){
+    const messageData = JSON.parse(ev.data);
+    if('online' in messageData){
+      showOnlinePeople(messageData.online)
+    }
+    
   }
   return(
     <div className="flex h-screen">
