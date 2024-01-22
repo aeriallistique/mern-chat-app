@@ -2,6 +2,7 @@ import {useEffect, useState, useContext} from 'react';
 import Avatar from './Avatar';
 import Logo from './Logo';
 import { UserContext } from './UserContext';
+import {uniqBy} from "lodash";
 
 export default function Chat(){
   const [ws, setWs] = useState(null);
@@ -9,6 +10,7 @@ export default function Chat(){
   const [selectedUserId, setSelectedUserId] = useState(null)
   const {username, id} = useContext(UserContext);
   const [newMessageText, setNewMessageText] = useState('')
+  const [messages, setMessages] = useState([]);
 
   useEffect(()=>{
    const ws = new WebSocket('ws://localhost:4000');
@@ -32,16 +34,27 @@ export default function Chat(){
         text: newMessageText,
       }
     ));
+    setNewMessageText('')
+    setMessages(prev => ([...prev, {
+      text: newMessageText, 
+      sender: id,
+      recipient: selectedUserId,
+    }]))
   }
 
   function handleMessage(ev){
     const messageData = JSON.parse(ev.data);
+    console.log({ev,messageData})
     if('online' in messageData){
       showOnlinePeople(messageData.online)
+    }else if('text' in messageData){
+      setMessages(prev => ([...prev, {...messageData}]))
     }
   }
   const onlinePeopleExclOurUser = {...onlinePeople};
   delete onlinePeopleExclOurUser[id]
+
+  const messagesWithoutDups = uniqBy(messages, 'id');
 
   return(
     <div className="flex h-screen">
@@ -70,6 +83,19 @@ export default function Chat(){
             <div className='text-gray-300'> &larr; Select person from the sidebar</div>  
             </div>
           )}
+        {!!selectedUserId && (
+          <div className='overflow-scroll'>
+            {messagesWithoutDups.map(message => (
+              <div className={message.sender === id ? 'text-right' : 'text-left'}>
+                <div className={"text-left inline-block p-2 my-2 rounded-sm text-sm " +( message.sender === id ? 'bg-blue-500 text-white' : 'bg-white text-gray-500')}>
+                  sender: {message.sender} <br />
+                  recipient: { message.recipient} <br />
+                  {message.text}
+                </div>   
+              </div>
+            ))}
+          </div>
+        )}
         </div>
         {!!selectedUserId && (
           <form className="flex gap-2 " onSubmit={sendMessage}>
