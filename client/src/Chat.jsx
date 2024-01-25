@@ -1,8 +1,9 @@
-import {useEffect, useState, useContext} from 'react';
+import {useEffect, useState, useContext, useRef} from 'react';
 import Avatar from './Avatar';
 import Logo from './Logo';
 import { UserContext } from './UserContext';
 import {uniqBy} from "lodash";
+import axios from 'axios';
 
 export default function Chat(){
   const [ws, setWs] = useState(null);
@@ -11,6 +12,7 @@ export default function Chat(){
   const {username, id} = useContext(UserContext);
   const [newMessageText, setNewMessageText] = useState('')
   const [messages, setMessages] = useState([]);
+  const divUnderMessages = useRef();
 
   useEffect(()=>{
    const ws = new WebSocket('ws://localhost:4000');
@@ -18,6 +20,19 @@ export default function Chat(){
 
    ws.addEventListener('message', handleMessage);
   },[])
+
+  useEffect(()=>{
+    const div = divUnderMessages.current;
+    if(div){
+      div.scrollIntoView({behavior:'smooth', block:'end'})
+    }
+  },[messages])
+
+  useEffect(()=>{
+    if(selectedUserId){
+      axios.get('/messages/'+selectedUserId)
+    }
+  },[selectedUserId])
 
   function showOnlinePeople(peopleArray){
     const people = {}
@@ -39,6 +54,7 @@ export default function Chat(){
       text: newMessageText, 
       sender: id,
       recipient: selectedUserId,
+      id: Date.now(),
     }]))
   }
 
@@ -84,16 +100,19 @@ export default function Chat(){
             </div>
           )}
         {!!selectedUserId && (
-          <div className='overflow-scroll'>
-            {messagesWithoutDups.map(message => (
-              <div className={message.sender === id ? 'text-right' : 'text-left'}>
-                <div className={"text-left inline-block p-2 my-2 rounded-sm text-sm " +( message.sender === id ? 'bg-blue-500 text-white' : 'bg-white text-gray-500')}>
-                  sender: {message.sender} <br />
-                  recipient: { message.recipient} <br />
-                  {message.text}
-                </div>   
-              </div>
-            ))}
+          <div className='relative h-full'>
+            <div className='overflow-y-scroll absolute bottom-2'>
+              {messagesWithoutDups.map(message => (
+                <div className={message.sender === id ? 'text-right' : 'text-left'}>
+                  <div className={"text-left inline-block p-2 my-2 rounded-sm text-sm " +( message.sender === id ? 'bg-blue-500 text-white' : 'bg-white text-gray-500')}>
+                    sender: {message.sender} <br />
+                    recipient: { message.recipient} <br />
+                    {message.text}
+                  </div>   
+                </div>
+                ))}
+                <div ref={divUnderMessages}></div>
+            </div>
           </div>
         )}
         </div>
@@ -104,7 +123,7 @@ export default function Chat(){
               onChange={(ev)=> setNewMessageText(ev.target.value)} 
               type="text" 
               placeholder="type your message here" 
-              className="bg-white border p-2 flex-gro rounded-sm w"/>
+              className="bg-white border p-2 flex-grow rounded-sm w"/>
               <button type='submit' className="bg-blue-500 p-2 text-white rounded-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
