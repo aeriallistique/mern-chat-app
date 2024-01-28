@@ -87,6 +87,10 @@ app.post('/login', async (req, res)=>{
   }
 })
 
+app.post('/logout', (req, res)=>{
+  res.cookie('token', '', {sameSite:'none', secure:true}).json('ok');
+})
+
 app.post('/register', async(req, res)=>{
   const {username, password} = req.body;
   try {
@@ -109,6 +113,30 @@ const server = app.listen(4000)
 
 const wss = new ws.WebSocketServer({server})
 wss.on('connection', (connection, req)=>{
+
+  //  notify everyone about online people ( when someone connects)
+  function notifyAboutOnlinePeople(){
+    [...wss.clients].forEach(client => {
+      client.send(JSON.stringify({
+        online: [...wss.clients].map(c => ({userId: c.userId, username: c.username}))
+      }
+      ))
+    })
+  }
+
+  connection.isAlive = true;
+  connection.timmer = setInterval(()=>{
+    connection.ping();
+    connection.deathTimer = setTimeout(()=>{
+      connection.isAlive = false;
+      connection.terminate();
+      notifyAboutOnlinePeople();
+    },1000)
+  },5000)
+
+  connection.on('pong', ()=>{
+    clearTimeout(connection.deathTimer);
+  })
 
   // read username and id from the cookie or this connection
  const cookies = req.headers.cookie;
@@ -148,11 +176,7 @@ wss.on('connection', (connection, req)=>{
  });
 
  
-//  notify everyone about online people ( when someone connects)
- [...wss.clients].forEach(client => {
-   client.send(JSON.stringify({
-     online: [...wss.clients].map(c => ({userId: c.userId, username: c.username}))
-   }
-   ))
- })
+  notifyAboutOnlinePeople();
 })
+
+
