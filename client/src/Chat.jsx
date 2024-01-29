@@ -71,11 +71,14 @@ export default function Chat(){
     setOnlinePeople(people);
   }
 
-  function sendMessage(ev){
-    ev.preventDefault();
+  function sendMessage(ev, file= null){
+    if(ev){
+      ev.preventDefault();
+    }
     ws.send(JSON.stringify({
         recipient: selectedUserId,
         text: newMessageText,
+        file,
       }
     ));
     setNewMessageText('')
@@ -85,6 +88,18 @@ export default function Chat(){
       recipient: selectedUserId,
       _id: Date.now(),
     }]))
+  }
+
+  function sendFile(ev){
+    const reader = new FileReader();
+    reader.readAsDataURL(ev.target.files[0])
+    reader.onload = ()=>{
+      sendMessage(null, {
+        name: ev.target.files[0].name,
+        data: reader.result,
+      })
+    }
+    
   }
 
   function handleMessage(ev){
@@ -137,7 +152,7 @@ export default function Chat(){
         </div>
        
         <div className='p-2 text-center flex items-center justify-center'>
-            <span className='mr-2 text-sm text-gray-600 flex items-center'>
+            <span className='mr-2 text-sm text-gray-600 flex items-center'>Hello:  
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
               <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
             </svg>
@@ -178,6 +193,13 @@ export default function Chat(){
               type="text" 
               placeholder="type your message here" 
               className="bg-white border p-2 flex-grow rounded-sm w"/>
+              <label  
+                className='bg-gray-200 p-2 text-gray-600 rounded-sm border-gray-300 cursor-pointer'>
+                  <input type="file" className='hidden'  onChange={sendFile}/>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                <path fillRule="evenodd" d="M18.97 3.659a2.25 2.25 0 0 0-3.182 0l-10.94 10.94a3.75 3.75 0 1 0 5.304 5.303l7.693-7.693a.75.75 0 0 1 1.06 1.06l-7.693 7.693a5.25 5.25 0 1 1-7.424-7.424l10.939-10.94a3.75 3.75 0 1 1 5.303 5.304L9.097 18.835l-.008.008-.007.007-.002.002-.003.002A2.25 2.25 0 0 1 5.91 15.66l7.81-7.81a.75.75 0 0 1 1.061 1.06l-7.81 7.81a.75.75 0 0 0 1.054 1.068L18.97 6.84a2.25 2.25 0 0 0 0-3.182Z" clipRule="evenodd" />
+                </svg>
+              </label>
               <button type='submit' className="bg-blue-500 p-2 text-white rounded-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />

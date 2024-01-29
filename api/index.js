@@ -7,6 +7,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser')
 const bcrypt = require('bcryptjs');
 const ws = require('ws');
+const fs = require('fs');
 
 dotenv.config();
 const mongoose = require('mongoose');
@@ -125,10 +126,11 @@ wss.on('connection', (connection, req)=>{
   }
 
   connection.isAlive = true;
-  connection.timmer = setInterval(()=>{
+  connection.timer = setInterval(()=>{
     connection.ping();
     connection.deathTimer = setTimeout(()=>{
       connection.isAlive = false;
+      clearInterval(connection.timer)
       connection.terminate();
       notifyAboutOnlinePeople();
     },1000)
@@ -157,7 +159,18 @@ wss.on('connection', (connection, req)=>{
 
  connection.on('message', async (message)=>{
    const messageData = JSON.parse(message.toString());
-   const { recipient, text} = messageData;
+   const { recipient, text, file} = messageData;
+   if(file){
+     const parts = file.name.split('.');
+     const ext = parts[parts.length - 1];
+     const filename = Date.now()+ '.' +ext;
+     const path = __dirname + '/uploads/' +filename;
+     const bufferData = Buffer.from(file.data, 'base64');
+      fs.writeFile(path, bufferData, ()=>{
+        console.log('file saved' + path)
+      } )
+   }
+
    if(recipient && text){
     const messageDoc = await Message.create({
       sender: connection.userId,
